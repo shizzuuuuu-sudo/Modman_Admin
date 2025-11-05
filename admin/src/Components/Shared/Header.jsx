@@ -32,7 +32,7 @@ const Header = () => {
           showConfirmButton: false,
           timer: 1200,
         });
-        navigate("/auth-signin"); // redirect to login page
+        navigate("/"); // redirect to login page
       }
     });
   };
