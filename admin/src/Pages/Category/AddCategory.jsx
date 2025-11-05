@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import httpClient from "../../Utils/httpClient";
 import { ImageHandler } from "../../Utils/ImageHandler";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -10,6 +11,7 @@ const AddCategory = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const navigate = useNavigate();
 
   // Handle file selection and upload
   const handleImageChange = async (e) => {
@@ -23,42 +25,44 @@ const AddCategory = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!title) {
-      setError("Category title is required");
-      return;
+const handleSubmit = async () => {
+  if (!title) {
+    setError("Category title is required");
+    return;
+  }
+  if (!imageFile) {
+    setError("Please select an image");
+    return;
+  }
+
+  setLoading(true);
+  setError("");
+  setSuccess("");
+
+  try {
+    const formData = new FormData();
+    formData.append("Categoryname", title);
+    formData.append("image", imageFile); // ✅ binary file
+
+    const { data } = await httpClient.post(
+      "/categories/CreateCategory",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+
+    if (data.success) {
+      setSuccess("Category created successfully!");
+        setTimeout(() => navigate("/CategoryList"), 1000);
+    } else {
+      setError(data.message || "Failed to create category");
     }
-    if (!uploadedImage) {
-      setError("Please upload a category image");
-      return;
-    }
+  } catch (err) {
+    setError(err.response?.data?.message || err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const payload = {
-        Categoryname: title,
-        image: uploadedImage, // send uploaded image info, not raw File
-      };
-
-      const { data } = await httpClient.post("/categories/CreateCategory", payload);
-
-      if (data.success) {
-        setSuccess("Category created successfully!");
-        setTitle("");
-        setImageFile(null);
-        setUploadedImage(null);
-      } else {
-        setError(data.message || "Failed to create category");
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <section>
@@ -70,15 +74,19 @@ const AddCategory = () => {
               <div className="card h-100">
                 <div className="card-body text-center">
                   <div className="bg-light rounded p-3">
-                    <img
-                      src={
-                        imageFile
-                          ? URL.createObjectURL(imageFile)
-                          : "assets/images/product/p-1.png"
-                      }
-                      alt="Category Thumbnail"
-                      className="img-fluid avatar-xxl"
-                    />
+                    {imageFile || uploadedImage ? (
+                      <img
+                        src={
+                          imageFile
+                            ? URL.createObjectURL(imageFile)
+                            : uploadedImage
+                        }
+                        alt="Preview"
+                        className="img-fluid rounded"
+                      />
+                    ) : (
+                      <span className="text-muted">+ Add Image</span>
+                    )}
                   </div>
                   <div className="mt-3 text-center">
                     <h4>{title || "Category Title"}</h4>
@@ -107,7 +115,7 @@ const AddCategory = () => {
                   <h4 className="card-title">Add Thumbnail Photo</h4>
                 </div>
                 <div className="card-body text-center p-4">
-                  <div className="border p-5 rounded bg-light">
+                  <div className="border p-3 rounded bg-light">
                     <h5 className="mt-3">
                       Drop your images here, or{" "}
                       <span className="text-primary">click to browse</span>

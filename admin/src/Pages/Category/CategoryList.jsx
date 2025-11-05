@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import httpClient from "../../Utils/httpClient";
+import httpClient, { BASE_URL } from "../../Utils/httpClient"; 
 import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -36,7 +36,7 @@ const CategoryList = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const { data } = await httpClient.delete(`/categories/deleteCategory/${id}`);
+          const { data } = await httpClient.delete(`/categories/${id}`);
           if (data.success) {
             Swal.fire("Deleted!", "Category has been deleted.", "success");
             fetchCategories(); // Refresh list
@@ -60,8 +60,8 @@ const CategoryList = () => {
           <div className="col-xl-12">
             <div className="card">
               <div className="card-header d-flex justify-content-between align-items-center gap-1">
-                <h4 className="card-title flex-grow-1">All Categories List</h4>
-                <Link to="/AddCategory" className="btn btn-sm btn-primary">Add Product</Link>
+                <h4 className="card-title flex-grow-1">Categories List</h4>
+                <Link to="/AddCategory" className="btn btn-primary">Add Category</Link>
               </div>
 
               <div className="table-responsive">
@@ -80,7 +80,13 @@ const CategoryList = () => {
                         <td>{index + 1}</td>
                         <td>{cat.Categoryname}</td>
                         <td>
-                          <img src={cat.image} alt={cat.Categoryname} className="avatar-md rounded" />
+                        <img
+  src={`${BASE_URL}${cat.image}?v=${Date.now()}`} 
+  alt={cat.Categoryname}
+  className="avatar-md rounded"
+  style={{ width: "80px", height: "80px", objectFit: "cover" }}
+/>
+
                         </td>
                         <td>
                           <div className="d-flex gap-2">

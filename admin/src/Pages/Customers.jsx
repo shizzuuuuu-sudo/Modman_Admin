@@ -64,8 +64,7 @@ const Customers = () => {
   // Filter users based on search
   const filteredUsers = users.filter(user =>
     user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.phone?.includes(searchTerm)
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Format date
@@ -259,7 +258,7 @@ const Customers = () => {
                                 </div>
                                 <div>
                                   <div className="fw-semibold">{user.username}</div>
-                                  <small className="text-muted">ID: {user._id?.substring(0, 8)}...</small>
+                                  {/* <small className="text-muted">ID: {user._id?.substring(0, 8)}...</small> */}
                                 </div>
                               </div>
                             </td>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import httpClient from "../../Utils/httpClient";
+import { BASE_URL } from "../../Utils/httpClient";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const EditCategory = () => {
@@ -56,15 +57,14 @@ const EditCategory = () => {
       if (imageFile) formData.append("image", imageFile);
 
       const { data } = await httpClient.put(
-        `/categories/updateCategory/${id}`,
+        `/categories/${id}`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       if (data.success) {
         setSuccess("Category updated successfully!");
-        // Optional: redirect after update
-        setTimeout(() => navigate("/categories"), 1500);
+        setTimeout(() => navigate("/CategoryList"), 1500);
       } else {
         setError(data.message || "Failed to update category");
       }
@@ -90,12 +90,14 @@ const EditCategory = () => {
                         imageFile
                           ? URL.createObjectURL(imageFile)
                           : existingImage
-                          ? `http://localhost:5000/${existingImage}`
-                          : "assets/images/product/p-1.png"
+                          ? `${BASE_URL}${existingImage}`
+                          : "/assets/images/product/p-1.png"
                       }
                       alt="Category Thumbnail"
-                      className="img-fluid avatar-xxl"
+                      className="img-fluid avatar-xxl rounded"
+                      style={{ width: "150px", height: "150px", objectFit: "cover" }}
                     />
+
                   </div>
                   <div className="mt-3 text-center">
                     <h4>{title || "Category Title"}</h4>
@@ -124,7 +126,7 @@ const EditCategory = () => {
                   <h4 className="card-title">Update Thumbnail Photo</h4>
                 </div>
                 <div className="card-body text-center p-4">
-                  <div className="border p-5 rounded bg-light">
+                  <div className="border p-3 rounded bg-light">
                     <h5 className="mt-3">
                       Drop your image here, or{" "}
                       <span className="text-primary">click to browse</span>

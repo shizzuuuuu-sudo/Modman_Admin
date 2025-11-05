@@ -1,19 +1,12 @@
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import httpClient from "../../Utils/httpClient";
+import { useNavigate } from "react-router-dom";
 
 const AddProduct = () => {
-    const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [showPastels, setShowPastels] = useState(false);
-
-const pastelColours = [
-  { name: "Peach", color: "#FFDAB9" },
-  { name: "Mint", color: "#AAF0D1" },
-  { name: "Lavender", color: "#E6E6FA" },
-  { name: "Beige", color: "#F5F5DC" },
-  { name: "SkyBlue", color: "#87CEEB" },
-];
 
   const [product, setProduct] = useState({
     productName: "",
@@ -21,36 +14,30 @@ const pastelColours = [
     brandName: "",
     gender: "",
     sizes: [],
-    colours: [],
     description: "",
     tagNumber: "",
     inStock: "",
-    price: "",
+    oldPrice: "",
     discount: "",
     tax: "",
+    isNewArrival: false,
+    isLatestTrend: false,
   });
 
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
 
-  const sizesList = ["XS", "S", "M", "XL", "XXL", "3XL"];
-  const colourOptions = [
-    { name: "Dark", class: "text-dark" },
-    { name: "Yellow", class: "text-warning" },
-    { name: "White", class: "text-white border" },
-    { name: "Red", class: "text-danger" },
-    { name: "Green", class: "text-success" },
-    { name: "Blue", class: "text-primary" },
-    { name: "Sky", class: "text-info" },
-    { name: "Gray", class: "text-secondary" },
-  ];
+  const sizesList = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
 
-  // Handle Input Change
+  const calculatedPrice =
+    product.oldPrice && product.discount
+      ? product.oldPrice - (product.oldPrice * product.discount) / 100
+      : 0;
+
   const handleChange = (e) => {
     setProduct({ ...product, [e.target.name]: e.target.value });
   };
 
-  // Handle checkbox toggle (for sizes and colours)
   const toggleSelection = (type, value) => {
     setProduct((prev) => {
       const list = prev[type];
@@ -62,16 +49,15 @@ const pastelColours = [
     });
   };
 
-  // Handle file upload preview
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setImage(file);
     setPreview(URL.createObjectURL(file));
   };
 
-  // Submit Product
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const formData = new FormData();
       Object.entries(product).forEach(([key, value]) => {
@@ -81,6 +67,7 @@ const pastelColours = [
           formData.append(key, value);
         }
       });
+
       if (image) formData.append("image", image);
 
       const res = await httpClient.post("/products/createProduct", formData, {
@@ -95,24 +82,28 @@ const pastelColours = [
           brandName: "",
           gender: "",
           sizes: [],
-          colours: [],
           description: "",
           tagNumber: "",
           inStock: "",
-          price: "",
+          oldPrice: "",
           discount: "",
           tax: "",
+          isNewArrival: false,
+          isLatestTrend: false,
         });
         setImage(null);
         setPreview(null);
+        setTimeout(() => navigate("/ProductList"), 1000);
       }
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || "Failed to create product");
+    } finally {
+      setLoading(false);
     }
   };
 
-   const fetchCategories = async () => {
+  const fetchCategories = async () => {
     try {
       const { data } = await httpClient.get("/categories/getCategory");
       if (data.success) setCategories(data.categories);
@@ -150,42 +141,30 @@ const pastelColours = [
                   <h5 className="text-dark fw-medium mt-3">Price :</h5>
                   <h4 className="fw-semibold text-dark mt-2 d-flex align-items-center gap-2">
                     <span className="text-muted text-decoration-line-through">
-                      ${product.price || "0"}
+                      ₹{product.oldPrice || "0"}
                     </span>{" "}
-                    ${product.discount || "0"}{" "}
-                    <small className="text-muted">(30% Off)</small>
+                    ₹{calculatedPrice.toFixed(0)}{" "}
+                    <small className="text-muted">
+                      ({product.discount || 0}% Off)
+                    </small>
                   </h4>
-
-                  <div className="mt-3">
-                    <h5 className="text-dark fw-medium">Sizes:</h5>
-                    <div className="d-flex flex-wrap gap-2">
-                      {product.sizes.map((s) => (
-                        <span key={s} className="badge bg-light text-dark">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-3">
-                    <h5 className="text-dark fw-medium">Colours:</h5>
-                    <div className="d-flex flex-wrap gap-2">
-                      {product.colours.map((c) => (
-                        <i key={c} className={`bx bxs-circle fs-18 ${c}`}></i>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </div>
               <div className="card-footer bg-light-subtle">
                 <div className="row g-2">
                   <div className="col-lg-6">
-                    <button className="btn btn-outline-secondary w-100" onClick={handleSubmit}>
-                      Create Product
+                    <button
+                      type="submit"
+                      className="btn btn-outline-secondary w-100"
+                      onClick={handleSubmit}
+                      disabled={loading}
+                    >
+                      {loading ? "Creating..." : "Create Product"}
                     </button>
                   </div>
                   <div className="col-lg-6">
                     <button
+                      type="button"
                       className="btn btn-primary w-100"
                       onClick={() => window.history.back()}
                     >
@@ -233,19 +212,19 @@ const pastelColours = [
                     </div>
                     <div className="col-lg-6">
                       <label className="form-label">Category</label>
-                        <select
-                            name="category"
-                            value={product.category}
-                            onChange={handleChange}
-                            className="form-control"
-                            >
-                            <option value="">Select Category</option>
-                            {categories.map((cat) => (
-                                <option key={cat._id} value={cat._id}>
-                                {cat.Categoryname}
-                                </option>
-                            ))}
-                        </select>
+                      <select
+                        name="category"
+                        value={product.category}
+                        onChange={handleChange}
+                        className="form-control"
+                      >
+                        <option value="">Select Category</option>
+                        {categories.map((cat) => (
+                          <option key={cat._id} value={cat._id}>
+                            {cat.Categoryname}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="col-lg-4">
@@ -275,106 +254,42 @@ const pastelColours = [
                       </select>
                     </div>
 
-                    <div className="col-lg-6 mt-3">
-                      <h5 className="text-dark fw-medium">Sizes</h5>
-                      <div className="d-flex flex-wrap gap-2">
-                        {sizesList.map((s) => (
-                          <label
-                            key={s}
-                            className={`btn btn-light avatar-sm rounded d-flex justify-content-center align-items-center ${
-                              product.sizes.includes(s) ? "border border-primary" : ""
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={product.sizes.includes(s)}
-                              onChange={() => toggleSelection("sizes", s)}
-                              hidden
-                            />
-                            {s}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="col-lg-6 mt-3">
-  <h5 className="text-dark fw-medium">Colours</h5>
-  <div className="d-flex flex-wrap gap-2">
-    {/* Predefined Colours */}
-    {colourOptions.map((c) => (
-      <label
-        key={c.name}
-        className={`btn btn-light avatar-sm rounded d-flex justify-content-center align-items-center ${
-          product.colours.includes(c.class) ? "border border-primary" : ""
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={product.colours.includes(c.class)}
-          onChange={() => toggleSelection("colours", c.class)}
-          hidden
-        />
-        <i className={`bx bxs-circle fs-18 ${c.class}`}></i>
-      </label>
-    ))}
-
-    {/* Custom Pastel Colours Toggle */}
-    <button
-      type="button"
-      className="btn btn-light avatar-sm rounded d-flex justify-content-center align-items-center"
-      onClick={() => setShowPastels(!showPastels)}
-    >
-      <i className="bx bx-plus fs-18"></i>
-    </button>
-  </div>
-
-  {/* Pastel Swatches */}
-  {showPastels && (
-    <div className="d-flex flex-wrap gap-2 mt-2">
-      {pastelColours.map((p) => (
-        <label
-          key={p.name}
-          className={`btn btn-light avatar-sm rounded d-flex justify-content-center align-items-center ${
-            product.colours.includes(p.color) ? "border border-primary" : ""
-          }`}
-          style={{ backgroundColor: p.color }}
-        >
-          <input
-            type="checkbox"
-            checked={product.colours.includes(p.color)}
-            onChange={() => toggleSelection("colours", p.color)}
-            hidden
-          />
-        </label>
-      ))}
-    </div>
-  )}
-</div>
-
-
-                    <div className="col-lg-12 mt-3">
-                      <label className="form-label">Description</label>
-                      <textarea
-                        name="description"
-                        value={product.description}
+                    <div className="col-lg-4">
+                      <label className="form-label">Old Price</label>
+                      <input
+                        type="number"
+                        name="oldPrice"
+                        value={product.oldPrice}
                         onChange={handleChange}
-                        rows="5"
-                        className="form-control bg-light-subtle"
-                        placeholder="Short description about product"
+                        className="form-control"
+                        placeholder="Enter MRP"
                       />
                     </div>
 
                     <div className="col-lg-4">
-                      <label className="form-label">Tag Number</label>
+                      <label className="form-label">Discount (%)</label>
                       <input
-                        type="text"
-                        name="tagNumber"
-                        value={product.tagNumber}
+                        type="number"
+                        name="discount"
+                        value={product.discount}
                         onChange={handleChange}
                         className="form-control"
-                        placeholder="#12345"
+                        placeholder="Discount %"
                       />
                     </div>
+
+                    <div className="col-lg-4">
+                      <label className="form-label">Tax (%)</label>
+                      <input
+                        type="number"
+                        name="tax"
+                        value={product.tax}
+                        onChange={handleChange}
+                        className="form-control"
+                        placeholder="Tax %"
+                      />
+                    </div>
+
                     <div className="col-lg-4">
                       <label className="form-label">Stock Quantity</label>
                       <input
@@ -387,58 +302,76 @@ const pastelColours = [
                       />
                     </div>
                     <div className="col-lg-4">
-                      <label className="form-label">Price</label>
+                      <label className="form-label">Tag Number</label>
                       <input
-                        type="number"
-                        name="price"
-                        value={product.price}
+                        type="text"
+                        name="tagNumber"
+                        value={product.tagNumber}
                         onChange={handleChange}
                         className="form-control"
-                        placeholder="000"
+                        placeholder="#12345"
                       />
                     </div>
 
-                    <div className="col-lg-4">
-                      <label className="form-label">Discount</label>
-                      <input
-                        type="number"
-                        name="discount"
-                        value={product.discount}
-                        onChange={handleChange}
-                        className="form-control"
-                        placeholder="000"
-                      />
+                    <div className="col-lg-12 mt-4">
+                      <h5 className="fw-bold text-dark">Available Sizes</h5>
+                      <div className="d-flex flex-wrap gap-3">
+                        {sizesList.map((size) => (
+                          <div key={size} className="form-check">
+                            <input
+                              className="form-check-input"
+                              type="checkbox"
+                              id={`size-${size}`}
+                              checked={product.sizes.includes(size)}
+                              onChange={() => toggleSelection("sizes", size)}
+                            />
+                            <label className="form-check-label" htmlFor={`size-${size}`}>
+                              {size}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="col-lg-4">
-                      <label className="form-label">Tax</label>
-                      <input
-                        type="number"
-                        name="tax"
-                        value={product.tax}
-                        onChange={handleChange}
-                        className="form-control"
-                        placeholder="000"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              <div className="p-3 bg-light mb-3 rounded">
-                <div className="row justify-content-end g-2">
-                  <div className="col-lg-2">
-                    <button type="submit" className="btn btn-outline-secondary w-100">
-                      Create Product
-                    </button>
-                  </div>
-                  <div className="col-lg-2">
-                    <button
-                      type="button"
-                      className="btn btn-primary w-100"
-                      onClick={() => window.history.back()}
-                    >
-                      Cancel
-                    </button>
+                    <div className="col-lg-6 mt-3">
+                      <label className="form-label">Display Options</label>
+                      <div className="d-flex gap-3 align-items-center">
+                        <div className="form-check">
+                          <input
+                            type="checkbox"
+                            id="newArrival"
+                            className="form-check-input"
+                            checked={product.isNewArrival}
+                            onChange={(e) =>
+                              setProduct({
+                                ...product,
+                                isNewArrival: e.target.checked,
+                              })
+                            }
+                          />
+                          <label htmlFor="newArrival" className="form-check-label">
+                            New Arrival
+                          </label>
+                        </div>
+                        <div className="form-check">
+                          <input
+                            type="checkbox"
+                            id="latestTrend"
+                            className="form-check-input"
+                            checked={product.isLatestTrend}
+                            onChange={(e) =>
+                              setProduct({
+                                ...product,
+                                isLatestTrend: e.target.checked,
+                              })
+                            }
+                          />
+                          <label htmlFor="latestTrend" className="form-check-label">
+                            Latest Trend
+                          </label>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

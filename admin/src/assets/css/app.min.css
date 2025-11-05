@@ -22152,3 +22152,14 @@ p.no-span::after {
     display: none;
   }
 }
+
+
+
+.preview-order{
+  positon:relative
+}
+.preview-order .close-btn{
+  position: absolute;
+    right: 77px;
+    top: 254px;
+}

@@ -17,3 +17,23 @@ export const userService = {
         return response.data;
     }
 };
+export const adminService = {
+    createAdmin: async () => {
+        const response = await httpClient.post("/admin/create");
+        return response.data;
+    },
+    getAllUsers: async () => {
+        const response = await httpClient.get("/admin/getAll");
+        return response.data;
+    },
+
+    updateUser: async (userId) => {
+        const response = await httpClient.get(`/admin/update/${userId}`);
+        return response.data;
+    },
+
+    deleteUser: async (userId) => {
+        const response = await httpClient.delete(`/admin/delete/${userId}`);
+        return response.data;
+    }
+};
