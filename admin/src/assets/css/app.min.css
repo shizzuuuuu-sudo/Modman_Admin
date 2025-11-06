@@ -22156,7 +22156,7 @@ p.no-span::after {
 
 
 .preview-order{
-  positon:relative
+  position:relative
 }
 .preview-order .close-btn{
   position: absolute;
