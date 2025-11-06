@@ -1,7 +1,7 @@
 import axios from "axios";
 
-export const BASE_URL = "http://localhost:5000";
-// export  const BASE_URL = "https://modmanapis.vercel.app";
+// export const BASE_URL = "http://localhost:5000";
+export  const BASE_URL = "https://modmanapis.vercel.app";
 
 // 🔹 API client (for all /api routes)
 const httpClient = axios.create({
