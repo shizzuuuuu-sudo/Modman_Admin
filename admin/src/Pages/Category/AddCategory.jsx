@@ -14,16 +14,12 @@ const AddCategory = () => {
   const navigate = useNavigate();
 
   // Handle file selection and upload
-  const handleImageChange = async (e) => {
-    setImageFile(e.target.files[0]);
-    const result = await ImageHandler(e);
+const handleImageChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setImageFile(file); // for preview + backend upload
+};
 
-    if (result.clientStatus) {
-      setUploadedImage(result.data); // backend response, maybe contains path/url
-    } else {
-      setError("Image upload failed: " + result.data);
-    }
-  };
 
 const handleSubmit = async () => {
   if (!title) {
@@ -42,17 +38,15 @@ const handleSubmit = async () => {
   try {
     const formData = new FormData();
     formData.append("Categoryname", title);
-    formData.append("image", imageFile); // ✅ binary file
+    formData.append("image", imageFile); // matches upload.single("image")
 
-    const { data } = await httpClient.post(
-      "/categories/CreateCategory",
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    const { data } = await httpClient.post("/categories/CreateCategory", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
     if (data.success) {
       setSuccess("Category created successfully!");
-        setTimeout(() => navigate("/CategoryList"), 1000);
+      setTimeout(() => navigate("/CategoryList"), 1000);
     } else {
       setError(data.message || "Failed to create category");
     }
@@ -62,6 +56,7 @@ const handleSubmit = async () => {
     setLoading(false);
   }
 };
+
 
 
   return (
@@ -74,19 +69,15 @@ const handleSubmit = async () => {
               <div className="card h-100">
                 <div className="card-body text-center">
                   <div className="bg-light rounded p-3">
-                    {imageFile || uploadedImage ? (
-                      <img
-                        src={
-                          imageFile
-                            ? URL.createObjectURL(imageFile)
-                            : uploadedImage
-                        }
-                        alt="Preview"
-                        className="img-fluid rounded"
-                      />
-                    ) : (
-                      <span className="text-muted">+ Add Image</span>
-                    )}
+  {imageFile ? (
+    <img
+      src={URL.createObjectURL(imageFile)}
+      alt="Preview"
+      className="img-fluid rounded"
+    />
+  ) : (
+    <span className="text-muted">+ Add Image</span>
+  )}
                   </div>
                   <div className="mt-3 text-center">
                     <h4>{title || "Category Title"}</h4>

@@ -33,47 +33,94 @@ const EditCategory = () => {
     fetchCategory();
   }, [id]);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      setExistingImage(null); // hide old image preview
-    }
-  };
+  // const handleImageChange = (e) => {
+  //   const file = e.target.files[0];
+  //   if (file) {
+  //     setImageFile(file);
+  //     setExistingImage(null); // hide old image preview
+  //   }
+  // };
 
-  const handleSubmit = async () => {
-    if (!title) {
-      setError("Category title is required");
-      return;
-    }
+  // const handleSubmit = async () => {
+  //   if (!title) {
+  //     setError("Category title is required");
+  //     return;
+  //   }
 
-    setLoading(true);
+  //   setLoading(true);
+  //   setError("");
+  //   setSuccess("");
+
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("Categoryname", title);
+  //     if (imageFile) formData.append("image", imageFile);
+
+  //     const { data } = await httpClient.put(
+  //       `/categories/${id}`,
+  //       formData,
+  //       { headers: { "Content-Type": "multipart/form-data" } }
+  //     );
+
+  //     if (data.success) {
+  //       setSuccess("Category updated successfully!");
+  //       setTimeout(() => navigate("/CategoryList"), 1500);
+  //     } else {
+  //       setError(data.message || "Failed to update category");
+  //     }
+  //   } catch (err) {
+  //     setError(err.response?.data?.message || err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const handleImageChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  setLoading(true);
+  const result = await uploadToCloudinary(file);
+
+  if (result.success) {
+    setExistingImage(result.url); // directly replace old image
+    setImageFile(file);
     setError("");
-    setSuccess("");
+  } else {
+    setError("Image upload failed: " + result.error);
+  }
+  setLoading(false);
+};
 
-    try {
-      const formData = new FormData();
-      formData.append("Categoryname", title);
-      if (imageFile) formData.append("image", imageFile);
+const handleSubmit = async () => {
+  if (!title || !existingImage) {
+    setError("Title and image are required");
+    return;
+  }
 
-      const { data } = await httpClient.put(
-        `/categories/${id}`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+  setLoading(true);
+  setError("");
+  setSuccess("");
 
-      if (data.success) {
-        setSuccess("Category updated successfully!");
-        setTimeout(() => navigate("/CategoryList"), 1500);
-      } else {
-        setError(data.message || "Failed to update category");
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || err.message);
-    } finally {
-      setLoading(false);
+  try {
+    const { data } = await httpClient.put(`/categories/${id}`, {
+      Categoryname: title,
+      image: existingImage, // Cloudinary URL
+    });
+
+    if (data.success) {
+      setSuccess("Category updated successfully!");
+      setTimeout(() => navigate("/CategoryList"), 1500);
+    } else {
+      setError(data.message || "Failed to update category");
     }
-  };
+  } catch (err) {
+    setError(err.response?.data?.message || err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <section>
@@ -86,13 +133,7 @@ const EditCategory = () => {
                 <div className="card-body text-center">
                   <div className="bg-light rounded p-3">
                     <img
-                      src={
-                        imageFile
-                          ? URL.createObjectURL(imageFile)
-                          : existingImage
-                          ? `${BASE_URL}${existingImage}`
-                          : "/assets/images/product/p-1.png"
-                      }
+                      src= {existingImage}
                       alt="Category Thumbnail"
                       className="img-fluid avatar-xxl rounded"
                       style={{ width: "150px", height: "150px", objectFit: "cover" }}

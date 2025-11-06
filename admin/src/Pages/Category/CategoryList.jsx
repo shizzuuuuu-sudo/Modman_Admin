@@ -81,7 +81,7 @@ const CategoryList = () => {
                         <td>{cat.Categoryname}</td>
                         <td>
                         <img
-  src={`${BASE_URL}${cat.image}?v=${Date.now()}`} 
+  src={cat.image}
   alt={cat.Categoryname}
   className="avatar-md rounded"
   style={{ width: "80px", height: "80px", objectFit: "cover" }}
