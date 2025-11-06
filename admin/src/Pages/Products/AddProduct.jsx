@@ -67,57 +67,38 @@ const handleFileChange = (e) => {
   setPreviews((prev) => [...prev, ...newPreviews]);
 };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      Object.entries(product).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          value.forEach((v) => formData.append(key, v));
-        } else {
-          formData.append(key, value);
-        }
-      });
+ // frontend
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    const formData = new FormData();
+    Object.entries(product).forEach(([key, value]) => {
+      if (Array.isArray(value)) value.forEach(v => formData.append(key, v));
+      else formData.append(key, value);
+    });
 
-      // if (image) formData.append("image", image);
-   for (let i = 0; i < images.length; i++) {
-    formData.append("image", images[i]); // "image" — must match multer field name
-  }
+    images.forEach(img => formData.append("image", img));
 
+    const res = await httpClient.post("/products/createProduct", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
-      const res = await httpClient.post("/products/createProduct", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      if (res.data) {
-        toast.success("Product Created Successfully!");
-        setProduct({
-          productName: "",
-          category: "",
-          brandName: "",
-          gender: "",
-          sizes: [],
-          description: "",
-          tagNumber: "",
-          inStock: "",
-          oldPrice: "",
-          discount: "",
-          tax: "",
-          isNewArrival: false,
-          isLatestTrend: false,
-        });
-        setImages([]);
-        setPreviews([]);
-        setTimeout(() => navigate("/ProductList"), 1000);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Failed to create product");
-    } finally {
-      setLoading(false);
+    if (res.data.success) {
+      toast.success("Product Created Successfully!");
+      // setProduct({ ... }); // reset
+      setImages([]);
+      setPreviews([]);
+      navigate("/ProductList");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error(err.response?.data?.message || "Failed to create product");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const fetchCategories = async () => {
     try {

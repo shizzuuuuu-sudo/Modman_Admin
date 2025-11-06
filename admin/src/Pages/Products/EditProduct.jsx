@@ -29,6 +29,11 @@ const [newImages, setNewImages] = useState([]);
     image: null,
   });
 
+   const calculatedPrice =
+    product.oldPrice && product.discount
+      ? product.oldPrice - (product.oldPrice * product.discount) / 100
+      : product.price;
+
   const sizesList = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
 
   // Fetch categories
@@ -210,7 +215,7 @@ const [newImages, setNewImages] = useState([]);
                     <span className="text-muted text-decoration-line-through">
                       ₹{product.oldPrice || "0"}
                     </span>{" "}
-                    ₹{product.price || "0"}
+                    ₹{calculatedPrice.toFixed(0) || "0"}
                     <small className="text-muted">
                       ({product.discount || 0}% Off)
                     </small>
@@ -413,7 +418,7 @@ const [newImages, setNewImages] = useState([]);
                       />
                     </div>
 
-                    <div className="col-md-4 mt-3">
+                    {/* <div className="col-md-4 mt-3">
                       <label className="form-label">Price</label>
                       <input
                         type="number"
@@ -422,7 +427,7 @@ const [newImages, setNewImages] = useState([]);
                         value={product.price}
                         onChange={handleChange}
                       />
-                    </div>
+                    </div> */}
 
                     <div className="col-md-4 mt-3">
                       <label className="form-label">Discount (%)</label>
