@@ -14,12 +14,14 @@ const ProductList = () => {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await httpClient.get("/products/getAllProducts");
-      if (Array.isArray(data)) {
-        setProducts(data);
-      } else {
-        console.error("Unexpected response:", data);
-      }
+   const { data } = await httpClient.get("/products/getAllProducts");
+
+if (data.success && Array.isArray(data.products)) {
+  setProducts(data.products);
+} else {
+  console.log("Unexpected response:", data);
+}
+
     } catch (error) {
       console.error("Error fetching Products:", error);
     } finally {
@@ -98,10 +100,10 @@ const ProductList = () => {
                           <td>{prod.category?.Categoryname || "—"}</td>
                           <td>{prod.productName || "—"}</td>
                           <td>
-                            {prod.image ? (
+                            {prod.images?.[0]?.url ? (
                               <img
-                                src={`${BASE_URL}${prod.image}`}
-                                alt={prod.productName}
+                                  src={prod.images && prod.images.length > 0 ? prod.images[0].url : "/placeholder.jpg"}
+                                  alt={prod.productName}
                                 className="rounded"
                                 style={{
                                   width: 70,

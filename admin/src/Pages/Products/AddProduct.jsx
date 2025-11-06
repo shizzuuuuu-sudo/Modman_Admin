@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import httpClient from "../../Utils/httpClient";
+import { FaPlus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const AddProduct = () => {
@@ -24,8 +25,8 @@ const AddProduct = () => {
     isLatestTrend: false,
   });
 
-  const [image, setImage] = useState(null);
-  const [preview, setPreview] = useState(null);
+const [images, setImages] = useState([]);
+const [previews, setPreviews] = useState([]);
 
   const sizesList = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
 
@@ -49,11 +50,22 @@ const AddProduct = () => {
     });
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    setImage(file);
-    setPreview(URL.createObjectURL(file));
-  };
+  // const handleFileChange = (e) => {
+  //   const file = e.target.files[0];
+  //   setImage(file);
+  //   setPreview(URL.createObjectURL(file));
+  // };
+
+const handleFileChange = (e) => {
+  const files = Array.from(e.target.files);
+
+  // Add new files to existing ones
+  setImages((prev) => [...prev, ...files]);
+
+  // Generate and append new previews
+  const newPreviews = files.map((file) => URL.createObjectURL(file));
+  setPreviews((prev) => [...prev, ...newPreviews]);
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -68,7 +80,11 @@ const AddProduct = () => {
         }
       });
 
-      if (image) formData.append("image", image);
+      // if (image) formData.append("image", image);
+   for (let i = 0; i < images.length; i++) {
+    formData.append("image", images[i]); // "image" — must match multer field name
+  }
+
 
       const res = await httpClient.post("/products/createProduct", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -91,8 +107,8 @@ const AddProduct = () => {
           isNewArrival: false,
           isLatestTrend: false,
         });
-        setImage(null);
-        setPreview(null);
+        setImages([]);
+        setPreviews([]);
         setTimeout(() => navigate("/ProductList"), 1000);
       }
     } catch (error) {
@@ -127,7 +143,7 @@ const AddProduct = () => {
             <div className="card">
               <div className="card-body">
                 <img
-                  src={preview || "/assets/images/product/p-1.png"}
+                  src={previews || "/assets/images/product/p-1.png"}
                   alt="Preview"
                   className="img-fluid rounded bg-light"
                 />
@@ -184,13 +200,65 @@ const AddProduct = () => {
                   <h4 className="card-title">Add Product Photo</h4>
                 </div>
                 <div className="card-body">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="form-control"
-                    onChange={handleFileChange}
-                  />
-                </div>
+  <div className="d-flex flex-wrap gap-3">
+    {/* Image Previews */}
+    {previews.map((src, index) => (
+      <div
+        key={index}
+        className="position-relative"
+        style={{
+          width: "80px",
+          height: "80px",
+          borderRadius: "8px",
+          overflow: "hidden",
+        }}
+      >
+        <img
+          src={src}
+          alt={`Preview ${index}`}
+          className="img-thumbnail"
+          style={{
+            width: "80px",
+            height: "80px",
+            objectFit: "cover",
+          }}
+        />
+      </div>
+    ))}
+
+    {/* Add Image Icon */}
+    <div
+      onClick={() => document.getElementById("imageInput").click()}
+      className="d-flex align-items-center justify-content-center border border-2 border-dashed rounded bg-light"
+      style={{
+        width: "80px",
+        height: "80px",
+        cursor: "pointer",
+        transition: "0.2s",
+      }}
+      title="Add Images"
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.backgroundColor = "#f1f1f1")
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.backgroundColor = "#f8f9fa")
+      }
+    >
+      <FaPlus size={22} color="#0d6efd" />
+    </div>
+
+    {/* Hidden Input */}
+    <input
+      id="imageInput"
+      type="file"
+      accept="image/*"
+      multiple
+      className="d-none"
+      onChange={handleFileChange}
+    />
+  </div>
+</div>
+
               </div>
 
               <div className="card">

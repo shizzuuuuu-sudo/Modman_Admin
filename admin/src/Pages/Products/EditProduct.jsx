@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { FaPlus } from "react-icons/fa";
 import httpClient, { BASE_URL } from "../../Utils/httpClient";
 
 export default function EditProduct() {
@@ -8,7 +9,8 @@ export default function EditProduct() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [existingImage, setExistingImage] = useState("");
+  const [existingImage, setExistingImage] = useState([]); // URLs of existing images
+const [newImages, setNewImages] = useState([]); 
 
   const [product, setProduct] = useState({
     productName: "",
@@ -59,9 +61,10 @@ export default function EditProduct() {
           tax: p.tax || "",
           isNewArrival: p.isNewArrival || false,
           isLatestTrend: p.isLatestTrend || false,
-          image: null,
+          images: null,
         });
-        setExistingImage(p.image || "");
+      setExistingImage(Array.isArray(p.image) ? p.image : []);
+      setNewImages(Array.isArray(p.image) ? Array(p.image.length).fill(null) : []);
       }
     } catch (error) {
       console.error("Error fetching product:", error);
@@ -87,11 +90,19 @@ export default function EditProduct() {
     }));
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setProduct({ ...product, image: file });
-  };
+  // const handleImageChange = (e) => {
+  //   const file = e.target.files[0];
+  //   setProduct({ ...product, image: file });
+  // };
 
+
+  const handleImageChange = (index, e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const updatedNewImages = [...newImages];
+  updatedNewImages[index] = file;
+  setNewImages(updatedNewImages);
+};
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -114,7 +125,10 @@ export default function EditProduct() {
 
       (product.sizes || []).forEach((s) => formData.append("sizes", s));
 
-      if (product.image) formData.append("image", product.image);
+      // if (product.image) formData.append("image", product.image);
+
+   newImages.forEach((file) => formData.append("image", file)); // <-- use "image"
+
 
       const { data } = await httpClient.put(`/products/${id}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -144,18 +158,33 @@ export default function EditProduct() {
               <div className="card">
                 <div className="card-body text-center">
                   <h5>Product Preview</h5>
-                  {existingImage && !product.image && (
-                    <img
-                      src={`${BASE_URL}${existingImage}`}
-                      alt="Product"
-                      style={{
-                        width: "100%",
-                        height: 200,
-                        objectFit: "contain",
-                        borderRadius: 8,
-                      }}
-                    />
-                  )}
+     <div className="d-flex flex-wrap gap-2 mt-3">
+  {existingImage.map((img, index) => (
+    <div key={index} style={{ position: "relative" }}>
+      <img
+        src={newImages[index] ? URL.createObjectURL(newImages[index]) : img} // img is the URL
+        alt={`Product ${index}`}
+        style={{
+          width: 100,
+          height: 100,
+          objectFit: "cover",
+          cursor: "pointer",
+          borderRadius: 8,
+        }}
+        onClick={() => document.getElementById(`image-input-${index}`).click()}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        id={`image-input-${index}`}
+        style={{ display: "none" }}
+        onChange={(e) => handleImageChange(index, e)}
+      />
+    </div>
+  ))}
+</div>
+
+
                   {product.image && (
                     <img
                       src={URL.createObjectURL(product.image)}
@@ -211,12 +240,70 @@ export default function EditProduct() {
                 <div className="card-body">
                   <div className="row g-3">
                     <div className="mt-3">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="form-control"
-                      onChange={handleImageChange}
-                    />
+                    <div className="d-flex flex-wrap gap-3">
+  {/* Existing & New Image Previews */}
+  {existingImage.map((img, index) => (
+    <div
+      key={index}
+      className="position-relative"
+      style={{
+        width: "80px",
+        height: "80px",
+        borderRadius: "8px",
+        overflow: "hidden",
+        cursor: "pointer",
+      }}
+      onClick={() => document.getElementById(`imageInput-${index}`).click()}
+    >
+      <img
+        src={newImages[index] ? URL.createObjectURL(newImages[index]) : img} // show new file if selected
+        alt={`Preview ${index}`}
+        className="img-thumbnail"
+        style={{ width: "80px", height: "80px", objectFit: "cover" }}
+      />
+      {/* Hidden Input for replacing this image */}
+      <input
+        type="file"
+        accept="image/*"
+        id={`imageInput-${index}`}
+        className="d-none"
+        onChange={(e) => handleImageChange(index, e)}
+      />
+    </div>
+  ))}
+
+  {/* Add Image Button */}
+  <div
+    onClick={() => document.getElementById("addNewImages").click()}
+    className="d-flex align-items-center justify-content-center border border-2 border-dashed rounded bg-light"
+    style={{
+      width: "80px",
+      height: "80px",
+      cursor: "pointer",
+      transition: "0.2s",
+    }}
+    title="Add Images"
+    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f1f1")}
+    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#f8f9fa")}
+  >
+    <FaPlus size={22} color="#0d6efd" />
+  </div>
+
+  {/* Hidden Input for adding new images */}
+  <input
+    id="addNewImages"
+    type="file"
+    accept="image/*"
+    multiple
+    className="d-none"
+    onChange={(e) => {
+      const files = Array.from(e.target.files);
+      setExistingImage([...existingImage, ...files.map(f => URL.createObjectURL(f))]);
+      setNewImages([...newImages, ...files]);
+    }}
+  />
+</div>
+
                   </div>
                     <div className="col-md-6">
                       <label className="form-label">Product Name</label>
