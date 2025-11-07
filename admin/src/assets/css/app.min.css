@@ -22163,3 +22163,6 @@ p.no-span::after {
     right: 77px;
     top: 254px;
 }
+.btn{
+  height: auto !important;
+}

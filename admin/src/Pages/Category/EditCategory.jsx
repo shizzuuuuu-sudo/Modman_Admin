@@ -75,26 +75,35 @@ const EditCategory = () => {
   //   }
   // };
 
-  const handleImageChange = async (e) => {
+//   const handleImageChange = async (e) => {
+//   const file = e.target.files[0];
+//   if (!file) return;
+
+//   setLoading(true);
+//   const result = await uploadToCloudinary(file);
+
+//   if (result.success) {
+//     setExistingImage(result.url); // directly replace old image
+//     setImageFile(file);
+//     setError("");
+//   } else {
+//     setError("Image upload failed: " + result.error);
+//   }
+//   setLoading(false);
+// };
+
+const handleImageChange = (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  setLoading(true);
-  const result = await uploadToCloudinary(file);
-
-  if (result.success) {
-    setExistingImage(result.url); // directly replace old image
-    setImageFile(file);
-    setError("");
-  } else {
-    setError("Image upload failed: " + result.error);
-  }
-  setLoading(false);
+  setImageFile(file);
+  setExistingImage(URL.createObjectURL(file)); // preview only
 };
 
+
 const handleSubmit = async () => {
-  if (!title || !existingImage) {
-    setError("Title and image are required");
+  if (!title) {
+    setError("Category title is required");
     return;
   }
 
@@ -103,9 +112,12 @@ const handleSubmit = async () => {
   setSuccess("");
 
   try {
-    const { data } = await httpClient.put(`/categories/${id}`, {
-      Categoryname: title,
-      image: existingImage, // Cloudinary URL
+    const formData = new FormData();
+    formData.append("Categoryname", title);
+    if (imageFile) formData.append("image", imageFile);
+
+    const { data } = await httpClient.put(`/categories/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
 
     if (data.success) {
@@ -120,6 +132,36 @@ const handleSubmit = async () => {
     setLoading(false);
   }
 };
+  
+
+// const handleSubmit = async () => {
+//   if (!title || !existingImage) {
+//     setError("Title and image are required");
+//     return;
+//   }
+
+//   setLoading(true);
+//   setError("");
+//   setSuccess("");
+
+//   try {
+//     const { data } = await httpClient.put(`/categories/${id}`, {
+//       Categoryname: title,
+//       image: existingImage, // Cloudinary URL
+//     });
+
+//     if (data.success) {
+//       setSuccess("Category updated successfully!");
+//       setTimeout(() => navigate("/CategoryList"), 1500);
+//     } else {
+//       setError(data.message || "Failed to update category");
+//     }
+//   } catch (err) {
+//     setError(err.response?.data?.message || err.message);
+//   } finally {
+//     setLoading(false);
+//   }
+// };
 
 
   return (

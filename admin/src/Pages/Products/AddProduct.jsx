@@ -67,37 +67,51 @@ const handleFileChange = (e) => {
   setPreviews((prev) => [...prev, ...newPreviews]);
 };
 
+
+
  // frontend
 const handleSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
+
   try {
+    // 1️⃣ Create FormData for file upload
     const formData = new FormData();
     Object.entries(product).forEach(([key, value]) => {
-      if (Array.isArray(value)) value.forEach(v => formData.append(key, v));
-      else formData.append(key, value);
+      if (Array.isArray(value)) {
+        value.forEach((v) => formData.append(key, v));
+      } else {
+        formData.append(key, value);
+      }
     });
 
-    images.forEach(img => formData.append("image", img));
+    // 2️⃣ Append multiple image files
+    images.forEach((file) => {
+      formData.append("image", file); // name must match multer field
+    });
 
+    // 3️⃣ Post formData (multipart/form-data)
     const res = await httpClient.post("/products/createProduct", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
     if (res.data.success) {
-      toast.success("Product Created Successfully!");
-      // setProduct({ ... }); // reset
+      toast.success("✅ Product Created Successfully!");
       setImages([]);
       setPreviews([]);
       navigate("/ProductList");
+    } else {
+      toast.error(res.data.message || "Failed to create product");
     }
   } catch (err) {
-    console.error(err);
-    toast.error(err.response?.data?.message || "Failed to create product");
+    console.error("Product creation error:", err);
+    toast.error(err.response?.data?.message || "Server Error");
   } finally {
     setLoading(false);
   }
 };
+
+
 
 
   const fetchCategories = async () => {
@@ -123,11 +137,22 @@ const handleSubmit = async (e) => {
           <div className="col-xl-3 col-lg-4">
             <div className="card">
               <div className="card-body">
-                <img
-                  src={previews || "/assets/images/product/p-1.png"}
-                  alt="Preview"
-                  className="img-fluid rounded bg-light"
-                />
+                {previews && previews.length > 0 ? (
+    previews.map((preview, index) => (
+      <div key={index} className="relative">
+        <img
+          src={preview}
+          alt={`Preview ${index + 1}`}
+          style={{ width: "100%", height: "auto",objectFit:"cover" }}
+        />
+        <span className="absolute top-1 right-2 bg-gray-700 text-white text-xs px-2 py-0.5 rounded-full">
+          {index + 1}
+        </span>
+      </div>
+    ))
+  ) : (
+    <p>+Add Image</p>
+  )}
                 <div className="mt-3">
                   <h4>
                     {product.productName || "Product Name"}{" "}

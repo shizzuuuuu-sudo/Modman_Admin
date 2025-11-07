@@ -28,11 +28,19 @@ const [newImages, setNewImages] = useState([]);
     isLatestTrend: false,
     image: null,
   });
+useEffect(() => {
+  const oldPriceNum = parseFloat(product.oldPrice) || 0;
+  const discountNum = parseFloat(product.discount) || 0;
 
-   const calculatedPrice =
-    product.oldPrice && product.discount
-      ? product.oldPrice - (product.oldPrice * product.discount) / 100
-      : product.price;
+  const newPrice = oldPriceNum - (oldPriceNum * discountNum) / 100;
+
+  // Update only if price changed
+  if (!isNaN(newPrice) && newPrice.toFixed(2) !== product.price) {
+    setProduct((prev) => ({ ...prev, price: newPrice.toFixed(2) }));
+  }
+}, [product.oldPrice, product.discount]);
+
+
 
   const sizesList = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
 
@@ -68,8 +76,9 @@ const [newImages, setNewImages] = useState([]);
           isLatestTrend: p.isLatestTrend || false,
           images: null,
         });
-      setExistingImage(Array.isArray(p.image) ? p.image : []);
-      setNewImages(Array.isArray(p.image) ? Array(p.image.length).fill(null) : []);
+     setExistingImage(p.images?.map(img => img.url) || []);
+setNewImages(p.images?.map(() => null) || []);
+
       }
     } catch (error) {
       console.error("Error fetching product:", error);
@@ -215,7 +224,8 @@ const [newImages, setNewImages] = useState([]);
                     <span className="text-muted text-decoration-line-through">
                       ₹{product.oldPrice || "0"}
                     </span>{" "}
-                    ₹{calculatedPrice.toFixed(0) || "0"}
+                    <span>
+                    ₹{product.price ? parseFloat(product.price).toFixed(0) : "0"}</span>
                     <small className="text-muted">
                       ({product.discount || 0}% Off)
                     </small>
