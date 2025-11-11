@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import httpClient, { BASE_URL } from "../../Utils/httpClient";
+import httpClient from "../../Utils/httpClient";
 import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -14,16 +14,14 @@ const ProductList = () => {
 
   const fetchProducts = async () => {
     try {
-   const { data } = await httpClient.get("/products/getAllProducts");
-
-if (data.success && Array.isArray(data.products)) {
-  setProducts(data.products);
-} else {
-  console.log("Unexpected response:", data);
-}
-
+      const { data } = await httpClient.get("/products/getAllProducts");
+      if (data.success && Array.isArray(data.products)) {
+        setProducts(data.products);
+      } else {
+        console.log("Unexpected response:", data);
+      }
     } catch (error) {
-      console.error("Error fetching Products:", error);
+      console.error("Error fetching products:", error);
     } finally {
       setLoading(false);
     }
@@ -80,11 +78,9 @@ if (data.success && Array.isArray(data.products)) {
                       <th>Image</th>
                       <th>Brand</th>
                       <th>Gender</th>
-                      <th>Sizes</th>
-                      {/* <th>Colours</th>
-                      <th>Description</th> */}
-                      <th>Tag No</th>
+                      <th>Colors</th>
                       <th>Stock</th>
+                      <th>Tag No</th>
                       <th>Price</th>
                       <th>Old Price</th>
                       <th>Discount</th>
@@ -94,16 +90,37 @@ if (data.success && Array.isArray(data.products)) {
                   </thead>
                   <tbody>
                     {products.length > 0 ? (
-                      products.map((prod, index) => (
-                        <tr key={prod._id}>
-                          <td>{index + 1}</td>
-                          <td>{prod.category?.Categoryname || "—"}</td>
-                          <td>{prod.productName || "—"}</td>
-                          <td>
-                            {prod.images?.[0]?.url ? (
+                      products.map((prod, index) => {
+                        // Get first image from first variant if available
+                        const firstImage =
+                          prod.variants?.[0]?.images?.[0]?.url || "/placeholder.jpg";
+
+                        // Get all color names
+                        const colorNames =
+                          prod.variants?.map((v) => v.colorName).join(", ") || "—";
+
+                        // Calculate total stock (sum of all stock quantities)
+                        const totalStock = prod.variants
+                          ?.reduce((sum, variant) => {
+                            return (
+                              sum +
+                              Object.values(variant.stock || {}).reduce(
+                                (a, b) => a + (Number(b) || 0),
+                                0
+                              )
+                            );
+                          }, 0)
+                          .toString();
+
+                        return (
+                          <tr key={prod._id}>
+                            <td>{index + 1}</td>
+                            <td>{prod.category?.Categoryname || "—"}</td>
+                            <td>{prod.productName || "—"}</td>
+                            <td>
                               <img
-                                  src={prod.images && prod.images.length > 0 ? prod.images[0].url : "/placeholder.jpg"}
-                                  alt={prod.productName}
+                                src={firstImage}
+                                alt={prod.productName}
                                 className="rounded"
                                 style={{
                                   width: 70,
@@ -112,52 +129,37 @@ if (data.success && Array.isArray(data.products)) {
                                   border: "1px solid #ddd",
                                 }}
                               />
-                            ) : (
-                              <span className="text-muted">No Image</span>
-                            )}
-                          </td>
-                          <td>{prod.brandName || "—"}</td>
-                          <td>{prod.gender || "—"}</td>
-                          <td>
-                            {Array.isArray(prod.sizes) && prod.sizes.length
-                              ? prod.sizes.join(", ")
-                              : "—"}
-                          </td>
-                          {/* <td>
-                            {Array.isArray(prod.colours) && prod.colours.length
-                              ? prod.colours.join(", ")
-                              : "—"}
-                          </td> */}
-                          {/* <td style={{ maxWidth: 180, whiteSpace: "normal" }}>
-                            {prod.description?.slice(0, 80) || "—"}
-                            {prod.description?.length > 80 && "..."}
-                          </td> */}
-                          <td>{prod.tagNumber || "—"}</td>
-                          <td>{prod.inStock ? "Yes" : "No"}</td>
-                          <td>₹{prod.price || "—"}</td>
-                          <td>₹{prod.oldPrice || "—"}</td>
-                          <td>{prod.discount ? `${prod.discount}%` : "—"}</td>
-                          <td>{prod.tax ? `${prod.tax}%` : "—"}</td>
-                          <td>
-                            <div className="d-flex gap-2">
-                              <Link to={`/EditProduct/${prod._id}`}>
-                                <button className="btn btn-outline-primary btn-sm">
-                                  Edit
+                            </td>
+                            <td>{prod.brandName || "—"}</td>
+                            <td>{prod.gender || "—"}</td>
+                            <td>{colorNames}</td>
+                            <td>{totalStock || "0"}</td>
+                            <td>{prod.tagNumber || "—"}</td>
+                            <td>₹{prod.price || "—"}</td>
+                            <td>₹{prod.oldPrice || "—"}</td>
+                            <td>{prod.discount ? `${prod.discount}%` : "—"}</td>
+                            <td>{prod.tax ? `${prod.tax}%` : "—"}</td>
+                            <td>
+                              <div className="d-flex gap-2">
+                                <Link to={`/EditProduct/${prod._id}`}>
+                                  <button className="btn btn-outline-primary btn-sm">
+                                    Edit
+                                  </button>
+                                </Link>
+                                <button
+                                  className="btn btn-outline-danger btn-sm"
+                                  onClick={() => handleDelete(prod._id)}
+                                >
+                                  Delete
                                 </button>
-                              </Link>
-                              <button
-                                className="btn btn-outline-danger btn-sm"
-                                onClick={() => handleDelete(prod._id)}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan="16" className="text-center text-muted py-3">
+                        <td colSpan="14" className="text-center text-muted py-3">
                           No products found.
                         </td>
                       </tr>

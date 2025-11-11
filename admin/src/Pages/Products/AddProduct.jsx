@@ -1,23 +1,27 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import httpClient from "../../Utils/httpClient";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { CKEditor } from "@ckeditor/ckeditor5-react";
+import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
 
 const AddProduct = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const sizesList = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
 
+  // 🧩 Main Product Data
   const [product, setProduct] = useState({
     productName: "",
     category: "",
     brandName: "",
     gender: "",
-    sizes: [],
+    fabric: "",
+    pattern: "",
     description: "",
     tagNumber: "",
-    inStock: "",
     oldPrice: "",
     discount: "",
     tax: "",
@@ -25,248 +29,163 @@ const AddProduct = () => {
     isLatestTrend: false,
   });
 
-const [images, setImages] = useState([]);
-const [previews, setPreviews] = useState([]);
+  // 🧩 Color Variants
+  const [variants, setVariants] = useState([
+    {
+      colorName: "",
+      colorCode: "#000000",
+      images: [],
+      previews: [],
+      stock: { XS: 0, S: 0, M: 0, L: 0, XL: 0, XXL: 0, "3XL": 0 },
+    },
+  ]);
 
-  const sizesList = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
-
+  // 🧮 Calculated price
   const calculatedPrice =
     product.oldPrice && product.discount
       ? product.oldPrice - (product.oldPrice * product.discount) / 100
       : 0;
 
+  // 🧭 Fetch Categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data } = await httpClient.get("/categories/getCategory");
+        if (data.success) setCategories(data.categories);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // 📂 Handle variant image upload
+  const handleVariantImages = (e, index) => {
+    const files = Array.from(e.target.files);
+    const newVariants = [...variants];
+    newVariants[index].images = [...newVariants[index].images, ...files];
+    newVariants[index].previews = [
+      ...newVariants[index].previews,
+      ...files.map((f) => URL.createObjectURL(f)),
+    ];
+    setVariants(newVariants);
+  };
+
+  // ➕ Add or Remove Variant
+  const addVariant = () => {
+    setVariants([
+      ...variants,
+      {
+        colorName: "",
+        colorCode: "#000000",
+        images: [],
+        previews: [],
+        stock: { XS: 0, S: 0, M: 0, L: 0, XL: 0, XXL: 0, "3XL": 0 },
+      },
+    ]);
+  };
+
+  const removeVariant = (index) => {
+    const updated = variants.filter((_, i) => i !== index);
+    setVariants(updated);
+  };
+
+  // 🔢 Update Stock Quantity
+  const handleStockChange = (index, size, value) => {
+    const newVariants = [...variants];
+    newVariants[index].stock[size] = value;
+    setVariants(newVariants);
+  };
+
+  // ✏️ Handle Product Field Changes
   const handleChange = (e) => {
     setProduct({ ...product, [e.target.name]: e.target.value });
   };
 
-  const toggleSelection = (type, value) => {
-    setProduct((prev) => {
-      const list = prev[type];
-      if (list.includes(value)) {
-        return { ...prev, [type]: list.filter((v) => v !== value) };
-      } else {
-        return { ...prev, [type]: [...list, value] };
-      }
-    });
-  };
+  // 🧾 Submit Handler
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  // const handleFileChange = (e) => {
-  //   const file = e.target.files[0];
-  //   setImage(file);
-  //   setPreview(URL.createObjectURL(file));
-  // };
-
-const handleFileChange = (e) => {
-  const files = Array.from(e.target.files);
-
-  // Add new files to existing ones
-  setImages((prev) => [...prev, ...files]);
-
-  // Generate and append new previews
-  const newPreviews = files.map((file) => URL.createObjectURL(file));
-  setPreviews((prev) => [...prev, ...newPreviews]);
-};
-
-
-
- // frontend
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-
-  try {
-    // 1️⃣ Create FormData for file upload
-    const formData = new FormData();
-    Object.entries(product).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(key, v));
-      } else {
-        formData.append(key, value);
-      }
-    });
-
-    // 2️⃣ Append multiple image files
-    images.forEach((file) => {
-      formData.append("image", file); // name must match multer field
-    });
-
-    // 3️⃣ Post formData (multipart/form-data)
-    const res = await httpClient.post("/products/createProduct", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-
-    if (res.data.success) {
-      toast.success("✅ Product Created Successfully!");
-      setImages([]);
-      setPreviews([]);
-      navigate("/ProductList");
-    } else {
-      toast.error(res.data.message || "Failed to create product");
-    }
-  } catch (err) {
-    console.error("Product creation error:", err);
-    toast.error(err.response?.data?.message || "Server Error");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-
-  const fetchCategories = async () => {
     try {
-      const { data } = await httpClient.get("/categories/getCategory");
-      if (data.success) setCategories(data.categories);
+      const formData = new FormData();
+
+      // Append simple fields
+      Object.entries(product).forEach(([key, value]) =>
+        formData.append(key, value)
+      );
+
+      // Append variants JSON
+      formData.append(
+        "variants",
+        JSON.stringify(
+          variants.map((v) => ({
+            colorName: v.colorName,
+            colorCode: v.colorCode,
+            stock: v.stock,
+          }))
+        )
+      );
+
+      // Append variant images under colorName key
+      variants.forEach((variant) => {
+        variant.images.forEach((file) => {
+          formData.append(variant.colorName, file);
+        });
+      });
+
+      const res = await httpClient.post("/products/createProduct", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data.success) {
+        toast.success("✅ Product Created Successfully!");
+        navigate("/ProductList");
+      } else {
+        toast.error(res.data.message || "Failed to create product");
+      }
     } catch (error) {
-      console.error("Error fetching categories:", error);
+      console.error("❌ Product create error:", error);
+      toast.error(error.response?.data?.message || "Server Error");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   return (
     <div className="page-content">
       <div className="container-xxl">
-        <div className="row">
-          {/* LEFT CARD PREVIEW */}
-          <div className="col-xl-3 col-lg-4">
-            <div className="card">
-              <div className="card-body">
-                {previews && previews.length > 0 ? (
-    previews.map((preview, index) => (
-      <div key={index} className="relative">
-        <img
-          src={preview}
-          alt={`Preview ${index + 1}`}
-          style={{ width: "100%", height: "auto",objectFit:"cover" }}
-        />
-        <span className="absolute top-1 right-2 bg-gray-700 text-white text-xs px-2 py-0.5 rounded-full">
-          {index + 1}
-        </span>
-      </div>
-    ))
-  ) : (
-    <p>+Add Image</p>
-  )}
-                <div className="mt-3">
-                  <h4>
-                    {product.productName || "Product Name"}{" "}
-                    <span className="fs-14 text-muted ms-1">
-                      ({product.category || "Category"})
-                    </span>
-                  </h4>
-                  <h5 className="text-dark fw-medium mt-3">Price :</h5>
-                  <h4 className="fw-semibold text-dark mt-2 d-flex align-items-center gap-2">
-                    <span className="text-muted text-decoration-line-through">
-                      ₹{product.oldPrice || "0"}
-                    </span>{" "}
+        <form onSubmit={handleSubmit}>
+          <div className="row">
+            {/* LEFT SIDE PREVIEW */}
+            <div className="col-xl-3 col-lg-4">
+              <div className="card">
+                <div className="card-body text-center">
+                  <h5>{product.productName || "Product Preview"}</h5>
+                  <p className="text-muted">
+                    {product.category || "Select category"}
+                  </p>
+                  <p className="fw-semibold text-dark">
                     ₹{calculatedPrice.toFixed(0)}{" "}
                     <small className="text-muted">
                       ({product.discount || 0}% Off)
                     </small>
-                  </h4>
+                  </p>
                 </div>
-              </div>
-              <div className="card-footer bg-light-subtle">
-                <div className="row g-2">
-                  <div className="col-lg-6">
-                    <button
-                      type="submit"
-                      className="btn btn-outline-secondary w-100"
-                      onClick={handleSubmit}
-                      disabled={loading}
-                    >
-                      {loading ? "Creating..." : "Create Product"}
-                    </button>
-                  </div>
-                  <div className="col-lg-6">
-                    <button
-                      type="button"
-                      className="btn btn-primary w-100"
-                      onClick={() => window.history.back()}
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                <div className="card-footer bg-light-subtle">
+                  <button
+                    type="submit"
+                    className="btn btn-outline-primary w-100"
+                    disabled={loading}
+                  >
+                    {loading ? "Creating..." : "Create Product"}
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* RIGHT FORM */}
-          <div className="col-xl-9 col-lg-8">
-            <form onSubmit={handleSubmit}>
-              <div className="card">
-                <div className="card-header">
-                  <h4 className="card-title">Add Product Photo</h4>
-                </div>
-                <div className="card-body">
-  <div className="d-flex flex-wrap gap-3">
-    {/* Image Previews */}
-    {previews.map((src, index) => (
-      <div
-        key={index}
-        className="position-relative"
-        style={{
-          width: "80px",
-          height: "80px",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}
-      >
-        <img
-          src={src}
-          alt={`Preview ${index}`}
-          className="img-thumbnail"
-          style={{
-            width: "80px",
-            height: "80px",
-            objectFit: "cover",
-          }}
-        />
-      </div>
-    ))}
-
-    {/* Add Image Icon */}
-    <div
-      onClick={() => document.getElementById("imageInput").click()}
-      className="d-flex align-items-center justify-content-center border border-2 border-dashed rounded bg-light"
-      style={{
-        width: "80px",
-        height: "80px",
-        cursor: "pointer",
-        transition: "0.2s",
-      }}
-      title="Add Images"
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.backgroundColor = "#f1f1f1")
-      }
-      onMouseLeave={(e) =>
-        (e.currentTarget.style.backgroundColor = "#f8f9fa")
-      }
-    >
-      <FaPlus size={22} color="#0d6efd" />
-    </div>
-
-    {/* Hidden Input */}
-    <input
-      id="imageInput"
-      type="file"
-      accept="image/*"
-      multiple
-      className="d-none"
-      onChange={handleFileChange}
-    />
-  </div>
-</div>
-
-              </div>
-
+            {/* RIGHT FORM */}
+            <div className="col-xl-9 col-lg-8">
               <div className="card">
                 <div className="card-header">
                   <h4 className="card-title">Product Information</h4>
@@ -274,23 +193,23 @@ const handleSubmit = async (e) => {
                 <div className="card-body">
                   <div className="row g-3">
                     <div className="col-lg-6">
-                      <label className="form-label">Product Name</label>
+                      <label>Product Name</label>
                       <input
-                        type="text"
                         name="productName"
                         value={product.productName}
                         onChange={handleChange}
                         className="form-control"
-                        placeholder="Enter product name"
+                        required
                       />
                     </div>
                     <div className="col-lg-6">
-                      <label className="form-label">Category</label>
+                      <label>Category</label>
                       <select
                         name="category"
                         value={product.category}
                         onChange={handleChange}
                         className="form-control"
+                        required
                       >
                         <option value="">Select Category</option>
                         {categories.map((cat) => (
@@ -300,158 +219,222 @@ const handleSubmit = async (e) => {
                         ))}
                       </select>
                     </div>
-
                     <div className="col-lg-4">
-                      <label className="form-label">Brand</label>
+                      <label>Brand</label>
                       <input
-                        type="text"
                         name="brandName"
                         value={product.brandName}
                         onChange={handleChange}
                         className="form-control"
-                        placeholder="Brand Name"
                       />
                     </div>
-
                     <div className="col-lg-4">
-                      <label className="form-label">Gender</label>
+                      <label>Gender</label>
                       <select
                         name="gender"
                         value={product.gender}
                         onChange={handleChange}
                         className="form-control"
                       >
-                        <option value="">Select Gender</option>
+                        <option value="">Select</option>
                         <option value="Men">Men</option>
                         <option value="Women">Women</option>
                         <option value="Unisex">Unisex</option>
                       </select>
                     </div>
-
                     <div className="col-lg-4">
-                      <label className="form-label">Old Price</label>
+                      <label>Old Price</label>
                       <input
-                        type="number"
                         name="oldPrice"
+                        type="number"
                         value={product.oldPrice}
                         onChange={handleChange}
                         className="form-control"
-                        placeholder="Enter MRP"
                       />
                     </div>
-
                     <div className="col-lg-4">
-                      <label className="form-label">Discount (%)</label>
+                      <label>Discount (%)</label>
                       <input
-                        type="number"
                         name="discount"
+                        type="number"
                         value={product.discount}
                         onChange={handleChange}
                         className="form-control"
-                        placeholder="Discount %"
                       />
                     </div>
-
                     <div className="col-lg-4">
-                      <label className="form-label">Tax (%)</label>
+                      <label>Tax (%)</label>
                       <input
-                        type="number"
                         name="tax"
+                        type="number"
                         value={product.tax}
                         onChange={handleChange}
                         className="form-control"
-                        placeholder="Tax %"
-                      />
-                    </div>
-
-                    <div className="col-lg-4">
-                      <label className="form-label">Stock Quantity</label>
-                      <input
-                        type="number"
-                        name="inStock"
-                        value={product.inStock}
-                        onChange={handleChange}
-                        className="form-control"
-                        placeholder="Quantity"
                       />
                     </div>
                     <div className="col-lg-4">
-                      <label className="form-label">Tag Number</label>
+                      <label>Tag Number</label>
                       <input
-                        type="text"
                         name="tagNumber"
                         value={product.tagNumber}
                         onChange={handleChange}
                         className="form-control"
-                        placeholder="#12345"
                       />
                     </div>
 
-                    <div className="col-lg-12 mt-4">
-                      <h5 className="fw-bold text-dark">Available Sizes</h5>
-                      <div className="d-flex flex-wrap gap-3">
-                        {sizesList.map((size) => (
-                          <div key={size} className="form-check">
-                            <input
-                              className="form-check-input"
-                              type="checkbox"
-                              id={`size-${size}`}
-                              checked={product.sizes.includes(size)}
-                              onChange={() => toggleSelection("sizes", size)}
-                            />
-                            <label className="form-check-label" htmlFor={`size-${size}`}>
-                              {size}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="col-lg-4">
+                      <label>Fabric *</label>
+                      <input
+                        name="fabric"
+                        value={product.fabric}
+                        onChange={handleChange}
+                        className="form-control"
+                        required
+                      />
+                    </div>
+                    <div className="col-lg-4">
+                      <label>Pattern *</label>
+                      <input
+                        name="pattern"
+                        value={product.pattern}
+                        onChange={handleChange}
+                        className="form-control"
+                        required
+                      />
                     </div>
 
-                    <div className="col-lg-6 mt-3">
-                      <label className="form-label">Display Options</label>
-                      <div className="d-flex gap-3 align-items-center">
-                        <div className="form-check">
-                          <input
-                            type="checkbox"
-                            id="newArrival"
-                            className="form-check-input"
-                            checked={product.isNewArrival}
-                            onChange={(e) =>
-                              setProduct({
-                                ...product,
-                                isNewArrival: e.target.checked,
-                              })
-                            }
-                          />
-                          <label htmlFor="newArrival" className="form-check-label">
-                            New Arrival
-                          </label>
+                    {/* 🔴 Color Variants */}
+                    <div className="col-lg-12 mt-4">
+                      <h5 className="fw-bold text-dark">Color Variants</h5>
+                      {variants.map((variant, index) => (
+                        <div
+                          key={index}
+                          className="border p-3 rounded mb-3 bg-light"
+                        >
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                            <div className="d-flex gap-2 align-items-center">
+                              <input
+                                type="text"
+                                placeholder="Color Name"
+                                value={variant.colorName}
+                                onChange={(e) => {
+                                  const updated = [...variants];
+                                  updated[index].colorName = e.target.value;
+                                  setVariants(updated);
+                                }}
+                                className="form-control w-auto"
+                                required
+                              />
+                              <input
+                                type="color"
+                                value={variant.colorCode}
+                                onChange={(e) => {
+                                  const updated = [...variants];
+                                  updated[index].colorCode = e.target.value;
+                                  setVariants(updated);
+                                }}
+                                className="form-control form-control-color"
+                              />
+                            </div>
+                            {variants.length > 1 && (
+                              <FaTrash
+                                color="red"
+                                onClick={() => removeVariant(index)}
+                                style={{ cursor: "pointer" }}
+                              />
+                            )}
+                          </div>
+
+                          {/* 🖼️ Images */}
+                          <div className="d-flex flex-wrap gap-2 mb-2">
+                            {variant.previews.map((src, i) => (
+                              <img
+                                key={i}
+                                src={src}
+                                alt="preview"
+                                style={{
+                                  width: "70px",
+                                  height: "70px",
+                                  objectFit: "cover",
+                                  borderRadius: "8px",
+                                }}
+                              />
+                            ))}
+                            <div
+                              className="border rounded d-flex align-items-center justify-content-center"
+                              style={{
+                                width: "70px",
+                                height: "70px",
+                                cursor: "pointer",
+                              }}
+                              onClick={() =>
+                                document
+                                  .getElementById(`file-${index}`)
+                                  .click()
+                              }
+                            >
+                              <FaPlus color="#0d6efd" />
+                            </div>
+                            <input
+                              type="file"
+                              id={`file-${index}`}
+                              multiple
+                              accept="image/*"
+                              className="d-none"
+                              onChange={(e) => handleVariantImages(e, index)}
+                            />
+                          </div>
+
+                          {/* 📦 Stock per size */}
+                          <div className="d-flex flex-wrap gap-3">
+                            {sizesList.map((size) => (
+                              <div key={size}>
+                                <label>{size}</label>
+                                <input
+                                  type="number"
+                                  value={variant.stock[size]}
+                                  onChange={(e) =>
+                                    handleStockChange(
+                                      index,
+                                      size,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="form-control"
+                                  style={{ width: "80px" }}
+                                />
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="form-check">
-                          <input
-                            type="checkbox"
-                            id="latestTrend"
-                            className="form-check-input"
-                            checked={product.isLatestTrend}
-                            onChange={(e) =>
-                              setProduct({
-                                ...product,
-                                isLatestTrend: e.target.checked,
-                              })
-                            }
-                          />
-                          <label htmlFor="latestTrend" className="form-check-label">
-                            Latest Trend
-                          </label>
-                        </div>
-                      </div>
+                      ))}
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary btn-sm mt-2"
+                        onClick={addVariant}
+                      >
+                        + Add Color Variant
+                      </button>
+                    </div>
+
+                    {/* ✍️ Description */}
+                    <div className="col-lg-12 mt-3">
+                      <label>Description *</label>
+                      <CKEditor
+                        editor={ClassicEditor}
+                        data={product.description}
+                        onChange={(event, editor) => {
+                          const data = editor.getData();
+                          setProduct({ ...product, description: data });
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
